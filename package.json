@@ -1,0 +1,21 @@
+{
+  "name": "ocp-yaml-generator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser-based generator for OpenShift 4.18+ agent-config.yaml and install-config.yaml, with nmstate network builder.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "pinia": "^2.2.4",
+    "vue": "^3.5.12"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.10"
+  }
+}
