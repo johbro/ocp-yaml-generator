@@ -1,8 +1,14 @@
 # OCP YAML Generator
 
-Browser-based form that generates `install-config.yaml` and `agent-config.yaml` for OpenShift 4.18+ agent-based installs on baremetal or platform `none`. Includes an nmstate network builder for ethernet, bonds, VLANs, and Linux bridges.
+Browser-based form that generates `install-config.yaml` and `agent-config.yaml` for OpenShift agent-based installs on baremetal or platform `none`. Includes an nmstate network builder for ethernet, bonds, VLANs, and Linux bridges.
 
 No server. Everything runs in your browser; pull secrets and SSH keys never leave the page.
+
+## Supported OCP versions
+
+The schema this tool emits is stable across **4.18 → 4.20**. The header has a version selector that only swaps the target of the doc-link "?" icons — the generated YAML shape does not change. Verified by fetching both 4.18 and 4.20 docs pages: identical anchor IDs, identical parameter tables.
+
+If you target a newer release that adds or deprecates fields, those deltas will not appear in the form until this project updates. You can still edit the emitted YAML by hand.
 
 ## Develop
 
