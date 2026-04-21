@@ -1,5 +1,6 @@
 <script setup>
 import { useConfig, hyperthreadingOptions, architectureOptions, networkTypeOptions, publishOptions, featureSetOptions, baselineCapabilityOptions, additionalCapabilityOptions, trustBundlePolicyOptions, cpuPartitioningOptions, platformTypeOptions, diskEncryptionTypes } from '../stores/config.js'
+import { atLeast420 } from '../utils/docs.js'
 import Section from './Section.vue'
 import Field from './Field.vue'
 import StringList from './StringList.vue'
@@ -67,6 +68,30 @@ function removeTangServer(i) { c.diskEncryption.tang.splice(i, 1) }
           <option v-for="o in architectureOptions" :key="o" :value="o">{{ o }}</option>
         </select>
       </Field>
+    </Section>
+
+    <Section v-if="atLeast420" title="Arbiter pool (Two-Node with Arbiter)" :start-open="false" doc-key="install.arbiter">
+      <Field label="Enable arbiter" doc-key="install.arbiter" help="Two-Node OpenShift with Arbiter (4.20+). Emits an arbiter pool alongside controlPlane/compute.">
+        <input type="checkbox" v-model="c.arbiter.enabled" />
+      </Field>
+      <template v-if="c.arbiter.enabled">
+        <Field label="Pool name" doc-key="install.arbiter.name" help='Must be "arbiter".'>
+          <input type="text" v-model="c.arbiter.name" />
+        </Field>
+        <Field label="Replicas" doc-key="install.arbiter.replicas" help="Typically 1.">
+          <input type="number" min="1" v-model.number="c.arbiter.replicas" />
+        </Field>
+        <Field label="Hyperthreading" doc-key="install.arbiter.hyperthreading">
+          <select v-model="c.arbiter.hyperthreading">
+            <option v-for="o in hyperthreadingOptions" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </Field>
+        <Field label="Architecture" doc-key="install.arbiter.architecture">
+          <select v-model="c.arbiter.architecture">
+            <option v-for="o in architectureOptions" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </Field>
+      </template>
     </Section>
 
     <Section title="Compute pools" doc-key="install.compute">

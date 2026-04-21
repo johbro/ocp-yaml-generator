@@ -1,4 +1,5 @@
 import yaml from 'js-yaml'
+import { atLeast420 } from './docs.js'
 
 // ---- Helpers ----
 const isEmpty = (v) => {
@@ -83,6 +84,16 @@ export function buildInstallConfig(src) {
       }))
   }
   if (src.featureSet) out.featureSet = src.featureSet
+
+  // Arbiter pool (OCP 4.20+)
+  if (atLeast420.value && src.arbiter?.enabled) {
+    out.arbiter = {
+      name: src.arbiter.name || 'arbiter',
+      replicas: Number(src.arbiter.replicas),
+      hyperthreading: src.arbiter.hyperthreading,
+      architecture: src.arbiter.architecture,
+    }
+  }
 
   const pruned = prune(out)
   // prune() drops `{}`, but platform `none` requires an explicit empty map.

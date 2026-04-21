@@ -94,6 +94,7 @@ function loadInstall(o) {
   if (o.additionalTrustBundle) c.additionalTrustBundle = o.additionalTrustBundle
   if (o.additionalTrustBundlePolicy) c.additionalTrustBundlePolicy = o.additionalTrustBundlePolicy
   if (Array.isArray(o.imageDigestSources)) c.imageDigestSources = o.imageDigestSources
+  if (o.arbiter) { c.arbiter.enabled = true; Object.assign(c.arbiter, o.arbiter) }
   if (o.capabilities) { c.capabilities.enabled = true; Object.assign(c.capabilities, o.capabilities) }
   if (o.featureSet) c.featureSet = o.featureSet
   if (o.pullSecret) c.pullSecret = o.pullSecret

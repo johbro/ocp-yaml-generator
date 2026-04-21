@@ -4,7 +4,7 @@
 //
 // nmstate uses a single rolling page with stable per-topic anchors.
 
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 export const ocpVersionOptions = ['4.18', '4.19', '4.20']
 const DEFAULT_VERSION = '4.20'
@@ -15,6 +15,10 @@ export const ocpVersion = ref(
 if (typeof localStorage !== 'undefined') {
   watch(ocpVersion, (v) => localStorage.setItem('ocpVersion', v))
 }
+
+// Minor-version comparator. Parses "4.20" → 20, "4.18" → 18.
+function minor(v) { return Number(String(v).split('.')[1]) }
+export const atLeast420 = computed(() => minor(ocpVersion.value) >= 20)
 
 // ---- Per-version URL builders (doc pages only; nmstate is versionless) ----
 function buildMap(ver) {
@@ -113,6 +117,13 @@ function buildMap(ver) {
     'install.diskEncryption': SEC_OPT,
     'install.diskEncryption.type': SEC_OPT,
     'install.diskEncryption.tang': SEC_OPT,
+
+    // install-config — arbiter pool (4.20+)
+    'install.arbiter': SEC_OPT,
+    'install.arbiter.name': SEC_OPT,
+    'install.arbiter.replicas': SEC_OPT,
+    'install.arbiter.hyperthreading': SEC_OPT,
+    'install.arbiter.architecture': SEC_OPT,
 
     // install-config — bare-metal platform
     'install.platformType': SEC_BM,

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
+import { atLeast420 } from '../utils/docs.js'
 
 // OCP 4.18+ defaults. Anything set to '' or [] is omitted on YAML emit.
 function makeInstallConfig() {
@@ -44,6 +45,14 @@ function makeInstallConfig() {
         includeHosts: false,
         hosts: [],
       },
+    },
+    // Arbiter pool (OCP 4.20+ — Two-Node OpenShift with Arbiter / TNA).
+    arbiter: {
+      enabled: false,
+      name: 'arbiter',
+      replicas: 1,
+      hyperthreading: 'Enabled',
+      architecture: 'amd64',
     },
     fips: false,
     cpuPartitioningMode: 'None', // None | AllNodes
@@ -178,7 +187,10 @@ export const additionalCapabilityOptions = [
 export const trustBundlePolicyOptions = ['Proxyonly', 'Always']
 export const cpuPartitioningOptions = ['None', 'AllNodes']
 export const platformTypeOptions = ['baremetal', 'none']
-export const roleOptions = ['master', 'worker']
+// Agent host roles — 'arbiter' is valid only on 4.20+.
+export const roleOptions = computed(() =>
+  atLeast420.value ? ['master', 'arbiter', 'worker'] : ['master', 'worker']
+)
 export const ifaceTypeOptions = ['ethernet', 'bond', 'vlan', 'linux-bridge']
 export const ifaceStateOptions = ['up', 'down', 'absent']
 export const bondModeOptions = [
