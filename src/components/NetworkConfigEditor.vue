@@ -58,10 +58,10 @@ function removeRoute(i) { props.networkConfig.routes.config.splice(i, 1) }
 
     <div class="card">
       <header><span class="title">DNS</span></header>
-      <Field label="Nameservers">
+      <Field label="Nameservers" doc-key="nmstate.dnsResolver.server">
         <StringList v-model="networkConfig['dns-resolver'].config.server" placeholder="192.168.122.1" />
       </Field>
-      <Field label="Search domains">
+      <Field label="Search domains" doc-key="nmstate.dnsResolver.search">
         <StringList v-model="networkConfig['dns-resolver'].config.search" placeholder="example.com" />
       </Field>
     </div>
@@ -76,16 +76,16 @@ function removeRoute(i) { props.networkConfig.routes.config.splice(i, 1) }
           <span class="title">{{ r.destination || 'route' }}</span>
           <button class="btn danger" @click="removeRoute(i)" type="button">Remove</button>
         </header>
-        <Field label="Destination"><input type="text" v-model="r.destination" placeholder="0.0.0.0/0" /></Field>
-        <Field label="Next-hop address"><input type="text" v-model="r['next-hop-address']" placeholder="192.168.122.1" /></Field>
-        <Field label="Next-hop interface">
+        <Field label="Destination" doc-key="nmstate.route.destination"><input type="text" v-model="r.destination" placeholder="0.0.0.0/0" /></Field>
+        <Field label="Next-hop address" doc-key="nmstate.route.nextHopAddress"><input type="text" v-model="r['next-hop-address']" placeholder="192.168.122.1" /></Field>
+        <Field label="Next-hop interface" doc-key="nmstate.route.nextHopInterface">
           <select v-model="r['next-hop-interface']">
             <option value="">(any)</option>
             <option v-for="iface in networkConfig.interfaces" :key="iface.name" :value="iface.name">{{ iface.name }}</option>
           </select>
         </Field>
-        <Field label="Metric"><input type="number" v-model.number="r.metric" /></Field>
-        <Field label="Table ID"><input type="number" v-model.number="r['table-id']" placeholder="254" /></Field>
+        <Field label="Metric" doc-key="nmstate.route.metric"><input type="number" v-model.number="r.metric" /></Field>
+        <Field label="Table ID" doc-key="nmstate.route.tableId"><input type="number" v-model.number="r['table-id']" placeholder="254" /></Field>
       </div>
     </div>
   </div>

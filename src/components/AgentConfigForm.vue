@@ -24,17 +24,17 @@ function duplicateHost(i) {
 <template>
   <div>
     <Section title="Agent identity & boot">
-      <Field label="Cluster name"><input type="text" v-model="a.metadata.name" /></Field>
-      <Field label="Rendezvous IP" help="Address of the node that coordinates the install. Must match one of the node IPs below and be in the machine network.">
+      <Field label="Cluster name" doc-key="agent.metadata.name"><input type="text" v-model="a.metadata.name" /></Field>
+      <Field label="Rendezvous IP" doc-key="agent.rendezvousIP" help="Address of the node that coordinates the install. Must match one of the node IPs below and be in the machine network.">
         <input type="text" v-model="a.rendezvousIP" />
       </Field>
-      <Field label="Boot artifacts base URL" help="Optional. HTTP(S) URL where PXE boot artifacts are hosted.">
+      <Field label="Boot artifacts base URL" doc-key="agent.bootArtifactsBaseURL" help="Optional. HTTP(S) URL where PXE boot artifacts are hosted.">
         <input type="text" v-model="a.bootArtifactsBaseURL" />
       </Field>
-      <Field label="Minimal ISO" help="Emit minimalISO: true for a smaller ISO that streams rootfs over HTTP.">
+      <Field label="Minimal ISO" doc-key="agent.minimalISO" help="Emit minimalISO: true for a smaller ISO that streams rootfs over HTTP.">
         <input type="checkbox" v-model="a.minimalISO" />
       </Field>
-      <Field label="Additional NTP sources">
+      <Field label="Additional NTP sources" doc-key="agent.additionalNTPSources">
         <StringList v-model="a.additionalNTPSources" placeholder="0.rhel.pool.ntp.org" />
       </Field>
     </Section>
