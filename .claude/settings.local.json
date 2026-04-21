@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm --version)"
+      "Bash(npm --version)",
+      "WebFetch(domain:docs.redhat.com)",
+      "WebFetch(domain:nmstate.io)",
+      "Bash(curl -sL \"https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/installing_an_on-premise_cluster_with_the_agent-based_installer/installation-config-parameters-agent\" -o /tmp/agent-params.html)",
+      "Read(//tmp/**)",
+      "Bash(curl -sL \"https://nmstate.io/devel/yaml_api.html\" -o /tmp/nmstate.html)"
     ]
   }
 }
