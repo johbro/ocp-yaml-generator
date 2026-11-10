@@ -1,24 +1,52 @@
 // Schema reference links. All URLs + anchors verified against the live docs
-// for OCP 4.18 and 4.20 — the anchor IDs are byte-identical across versions,
-// so switching `ocpVersion` just swaps the base URL path.
+// for OCP 4.18, 4.19, 4.20, 4.21, 4.22 and 5.0 — the anchor IDs are
+// byte-identical across versions, so switching `ocpVersion` just swaps the
+// base URL path.
 //
 // nmstate uses a single rolling page with stable per-topic anchors.
 
 import { ref, watch, computed } from 'vue'
 
-export const ocpVersionOptions = ['4.18', '4.19', '4.20']
-const DEFAULT_VERSION = '4.20'
+// Every release this tool knows about, oldest → newest. Also drives the
+// `baselineCapabilitySet` option list (v4.11 … v<selected>).
+export const knownOcpVersions = [
+  '4.11', '4.12', '4.13', '4.14', '4.15', '4.16', '4.17',
+  '4.18', '4.19', '4.20', '4.21', '4.22', '5.0',
+]
+// Releases selectable in the header picker (the ones whose docs we verified).
+export const ocpVersionOptions = ['4.18', '4.19', '4.20', '4.21', '4.22', '5.0']
+const DEFAULT_VERSION = '5.0'
 
-export const ocpVersion = ref(
-  (typeof localStorage !== 'undefined' && localStorage.getItem('ocpVersion')) || DEFAULT_VERSION
-)
+function loadStoredVersion() {
+  if (typeof localStorage === 'undefined') return null
+  const v = localStorage.getItem('ocpVersion')
+  return ocpVersionOptions.includes(v) ? v : null
+}
+
+export const ocpVersion = ref(loadStoredVersion() || DEFAULT_VERSION)
 if (typeof localStorage !== 'undefined') {
   watch(ocpVersion, (v) => localStorage.setItem('ocpVersion', v))
 }
 
-// Minor-version comparator. Parses "4.20" → 20, "4.18" → 18.
-function minor(v) { return Number(String(v).split('.')[1]) }
-export const atLeast420 = computed(() => minor(ocpVersion.value) >= 20)
+// ---- Version comparison ----
+// Parses "4.20" → [4, 20], "5.0" → [5, 0]. A plain minor-only compare breaks
+// at the 4.x → 5.0 boundary, so always compare [major, minor] tuples.
+export function parseVersion(v) {
+  const [maj, min] = String(v).split('.').map((n) => Number(n) || 0)
+  return [maj, min]
+}
+export function compareVersions(a, b) {
+  const [am, an] = parseVersion(a)
+  const [bm, bn] = parseVersion(b)
+  return am !== bm ? am - bm : an - bn
+}
+export function versionAtLeast(v, target) { return compareVersions(v, target) >= 0 }
+
+// Reactive feature gates keyed off the picker. Add one per schema delta.
+export const atLeast420 = computed(() => versionAtLeast(ocpVersion.value, '4.20')) // arbiter pool (TNA)
+export const atLeast422 = computed(() => versionAtLeast(ocpVersion.value, '4.22')) // osImageStream, TNF fencing
+export const atLeast50 = computed(() => versionAtLeast(ocpVersion.value, '5.0'))   // networkObservability, fencing macAddress
+export const isMajor5 = computed(() => parseVersion(ocpVersion.value)[0] >= 5)
 
 // ---- Per-version URL builders (doc pages only; nmstate is versionless) ----
 function buildMap(ver) {
@@ -39,6 +67,12 @@ function buildMap(ver) {
   const HOST_CONFIG = `${PREPARING}#agent-host-config${PREP}`
   const BONDS_VLANS = `${PREPARING}#agent-install-sample-config-bonds-vlans${PREP}`
   const FIPS = `${PREPARING}#agent-installer-fips-compliance${PREP}`
+
+  // Two-node topologies live in their own book (4.20+). Anchors verified on
+  // 4.20, 4.21, 4.22 and 5.0; the agent-based TNF samples exist from 4.22.
+  const TWO_NODE = `https://docs.redhat.com/en/documentation/openshift_container_platform/${ver}/html-single/installing_a_two_node_openshift_cluster/index`
+  const ARBITER_ABOUT = `${TWO_NODE}#about-two-node-arbiter-installation`
+  const TNF_INSTALL_SAMPLE = `${TWO_NODE}#sample-install-config-two-node-fencing-abi_install-tnf`
 
   const NMSTATE = 'https://nmstate.io/devel/yaml_api.html'
   const NM = {
@@ -96,12 +130,15 @@ function buildMap(ver) {
     'install.networking.ovnKubernetesConfig.internalMasqueradeSubnet': SEC_NET,
     'install.networking.ovnKubernetesConfig.internalTransitSwitchSubnet': SEC_NET,
     'install.networking.ovnKubernetesConfig.mtu': SEC_NET,
+    'install.networking.networkObservability': SEC_NET,
+    'install.networking.networkObservability.installationPolicy': SEC_NET,
 
     // install-config — optional
     'install.publish': SEC_OPT,
     'install.fips': FIPS,
     'install.cpuPartitioningMode': SEC_OPT,
     'install.featureSet': SEC_OPT,
+    'install.osImageStream': SEC_OPT,
     'install.proxy': SEC_OPT,
     'install.proxy.httpProxy': SEC_OPT,
     'install.proxy.httpsProxy': SEC_OPT,
@@ -118,8 +155,18 @@ function buildMap(ver) {
     'install.diskEncryption.type': SEC_OPT,
     'install.diskEncryption.tang': SEC_OPT,
 
+    // install-config — two-node with fencing (TNF, 4.22+ for agent-based)
+    'install.controlPlane.fencing': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials.hostname': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials.macAddress': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials.address': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials.username': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials.password': TNF_INSTALL_SAMPLE,
+    'install.controlPlane.fencing.credentials.certificateVerification': TNF_INSTALL_SAMPLE,
+
     // install-config — arbiter pool (4.20+)
-    'install.arbiter': SEC_OPT,
+    'install.arbiter': ARBITER_ABOUT,
     'install.arbiter.name': SEC_OPT,
     'install.arbiter.replicas': SEC_OPT,
     'install.arbiter.hyperthreading': SEC_OPT,

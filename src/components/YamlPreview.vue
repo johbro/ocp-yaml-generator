@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useConfig } from '../stores/config.js'
+import { useConfig, makeFencingCredential } from '../stores/config.js'
 import { buildInstallConfig, buildAgentConfig, parseYaml } from '../utils/yaml.js'
 
 const store = useConfig()
@@ -72,7 +72,18 @@ function loadInstall(o) {
   const c = store.install
   if (o.baseDomain) c.baseDomain = o.baseDomain
   if (o.metadata?.name) c.metadata.name = o.metadata.name
-  if (o.controlPlane) Object.assign(c.controlPlane, o.controlPlane)
+  if (o.controlPlane) {
+    // Keep our fencing wrapper ({ enabled, credentials }) intact — merge the
+    // scalar pool fields, then normalise fencing separately.
+    const { fencing, ...pool } = o.controlPlane
+    Object.assign(c.controlPlane, pool)
+    if (Array.isArray(fencing?.credentials)) {
+      c.controlPlane.fencing.enabled = true
+      const creds = fencing.credentials.map((x) => makeFencingCredential(x))
+      while (creds.length < 2) creds.push(makeFencingCredential())
+      c.controlPlane.fencing.credentials = creds
+    }
+  }
   if (Array.isArray(o.compute)) c.compute = o.compute
   if (o.networking) {
     if (o.networking.networkType) c.networking.networkType = o.networking.networkType
@@ -80,6 +91,9 @@ function loadInstall(o) {
     if (Array.isArray(o.networking.serviceNetwork)) c.networking.serviceNetwork = o.networking.serviceNetwork
     if (Array.isArray(o.networking.machineNetwork)) c.networking.machineNetwork = o.networking.machineNetwork
     if (o.networking.ovnKubernetesConfig) Object.assign(c.networking.ovnKubernetesConfig, o.networking.ovnKubernetesConfig)
+    if (o.networking.networkObservability?.installationPolicy) {
+      c.networking.networkObservability.installationPolicy = o.networking.networkObservability.installationPolicy
+    }
   }
   if (o.platform?.none) { c.platformType = 'none' }
   else if (o.platform?.baremetal) {
@@ -97,6 +111,7 @@ function loadInstall(o) {
   if (o.arbiter) { c.arbiter.enabled = true; Object.assign(c.arbiter, o.arbiter) }
   if (o.capabilities) { c.capabilities.enabled = true; Object.assign(c.capabilities, o.capabilities) }
   if (o.featureSet) c.featureSet = o.featureSet
+  if (o.osImageStream) c.osImageStream = o.osImageStream
   if (o.pullSecret) c.pullSecret = o.pullSecret
   if (o.sshKey) c.sshKey = o.sshKey
 }

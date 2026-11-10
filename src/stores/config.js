@@ -1,8 +1,24 @@
 import { defineStore } from 'pinia'
 import { reactive, computed } from 'vue'
-import { atLeast420 } from '../utils/docs.js'
+import { ocpVersion, knownOcpVersions, atLeast420, atLeast422, atLeast50, compareVersions } from '../utils/docs.js'
 
-// OCP 4.18+ defaults. Anything set to '' or [] is omitted on YAML emit.
+// One fencing credential for Two-Node OpenShift with Fencing (TNF).
+// `macAddress` as an alternative identifier to `hostname` is 5.0+.
+export function makeFencingCredential(overrides = {}) {
+  return {
+    hostname: '',
+    macAddress: '',
+    address: '', // redfish+https://<bmc>/redfish/v1/Systems/<id>
+    username: '',
+    password: '',
+    certificateVerification: '', // '' (omit → Enabled) | Enabled | Disabled
+    ...overrides,
+  }
+}
+
+// OCP 4.18 → 5.0 defaults. Anything set to '' or [] is omitted on YAML emit.
+// Fields that only exist on newer releases are gated at emit time by the
+// header version picker (see utils/docs.js), so leaving them here is harmless.
 function makeInstallConfig() {
   return {
     apiVersion: 'v1',
@@ -13,6 +29,16 @@ function makeInstallConfig() {
       replicas: 3,
       hyperthreading: 'Enabled',
       architecture: 'amd64',
+      // Two-Node OpenShift with Fencing (TNF). GA in 4.22; agent-based
+      // samples exist from 4.22. Requires replicas: 2, compute replicas 0,
+      // and exactly two credentials.
+      fencing: {
+        enabled: false,
+        credentials: [
+          makeFencingCredential({ hostname: 'master-0' }),
+          makeFencingCredential({ hostname: 'master-1' }),
+        ],
+      },
     },
     compute: [
       {
@@ -33,6 +59,10 @@ function makeInstallConfig() {
         internalMasqueradeSubnet: '',
         internalTransitSwitchSubnet: '',
         mtu: null,
+      },
+      // 5.0+ (Tech Preview, needs the NetworkObservabilityInstall feature gate).
+      networkObservability: {
+        installationPolicy: '', // '' (omit) | InstallAndEnable | NoAction
       },
     },
     platformType: 'baremetal', // baremetal | none
@@ -72,6 +102,9 @@ function makeInstallConfig() {
     additionalTrustBundlePolicy: 'Proxyonly', // Proxyonly | Always
     imageDigestSources: [], // [{ source, mirrors: [] }]
     featureSet: '', // '' | TechPreviewNoUpgrade | CustomNoUpgrade | DevPreviewNoUpgrade
+    // 4.22+: RHCOS base image stream. Tech Preview on 4.22 (needs
+    // featureSet: TechPreviewNoUpgrade), GA on 5.0 where rhel-10 is the default.
+    osImageStream: '', // '' (installer default) | rhel-9 | rhel-10
     diskEncryption: {
       enabled: false,
       type: 'tpmv2', // tpmv2 | tang
@@ -175,9 +208,16 @@ export const architectureOptions = ['amd64', 'arm64', 'ppc64le', 's390x']
 export const networkTypeOptions = ['OVNKubernetes']
 export const publishOptions = ['External', 'Internal', 'Mixed']
 export const featureSetOptions = ['', 'TechPreviewNoUpgrade', 'CustomNoUpgrade', 'DevPreviewNoUpgrade']
-export const baselineCapabilityOptions = [
-  'None', 'v4.11', 'v4.12', 'v4.13', 'v4.14', 'v4.15', 'v4.16', 'v4.17', 'v4.18', 'vCurrent',
-]
+// baselineCapabilitySet accepts None, vCurrent, and v<release> for every
+// release from 4.11 up to the one being installed — so the list follows the
+// header version picker (e.g. 5.0 adds v4.19 … v4.22 and v5.0).
+export const baselineCapabilityOptions = computed(() => [
+  'None',
+  ...knownOcpVersions
+    .filter((v) => compareVersions(v, ocpVersion.value) <= 0)
+    .map((v) => `v${v}`),
+  'vCurrent',
+])
 export const additionalCapabilityOptions = [
   'baremetal', 'Build', 'CloudCredential', 'CloudControllerManager', 'Console',
   'CSISnapshot', 'DeploymentConfig', 'ImageRegistry', 'Ingress', 'Insights',
@@ -187,6 +227,14 @@ export const additionalCapabilityOptions = [
 export const trustBundlePolicyOptions = ['Proxyonly', 'Always']
 export const cpuPartitioningOptions = ['None', 'AllNodes']
 export const platformTypeOptions = ['baremetal', 'none']
+// osImageStream — 4.22+ only (Tech Preview on 4.22, GA on 5.0).
+export const osImageStreamOptions = ['', 'rhel-9', 'rhel-10']
+// networking.networkObservability.installationPolicy — 5.0+ only.
+export const networkObservabilityPolicyOptions = ['', 'InstallAndEnable', 'NoAction']
+// fencing.credentials[].certificateVerification — '' omits (defaults to Enabled).
+export const certificateVerificationOptions = ['', 'Enabled', 'Disabled']
+// Feature gates re-exported for templates.
+export { atLeast420, atLeast422, atLeast50 }
 // Agent host roles — 'arbiter' is valid only on 4.20+.
 export const roleOptions = computed(() =>
   atLeast420.value ? ['master', 'arbiter', 'worker'] : ['master', 'worker']

@@ -1,14 +1,27 @@
 # OCP YAML Generator
 
-Browser-based form that generates `install-config.yaml` and `agent-config.yaml` for OpenShift agent-based installs on baremetal or platform `none`. Includes an nmstate network builder for ethernet, bonds, VLANs, and Linux bridges.
+Browser-based form that generates `install-config.yaml` and `agent-config.yaml` for OpenShift 4.18 → 5.0 agent-based installs on baremetal or platform `none`. Includes an nmstate network builder for ethernet, bonds, VLANs, and Linux bridges.
 
 No server. Everything runs in your browser; pull secrets and SSH keys never leave the page.
 
 ## Supported OCP versions
 
-The schema this tool emits is stable across **4.18 → 4.20**. The header has a version selector that only swaps the target of the doc-link "?" icons — the generated YAML shape does not change. Verified by fetching both 4.18 and 4.20 docs pages: identical anchor IDs, identical parameter tables.
+The header has a version selector covering **4.18, 4.19, 4.20, 4.21, 4.22 and 5.0**. It does two things: it retargets the doc-link "?" icons at that release's documentation, and it gates the handful of fields whose schema changed between releases. Everything else in `install-config.yaml` and `agent-config.yaml` is identical across the whole range (verified by diffing the parameter tables and anchor IDs of every release's docs pages).
 
-If you target a newer release that adds or deprecates fields, those deltas will not appear in the form until this project updates. You can still edit the emitted YAML by hand.
+Version-gated fields:
+
+| Field | Versions | Status |
+|---|---|---|
+| `arbiter` pool + `role: arbiter` hosts (Two-Node with Arbiter) | 4.20+ | GA |
+| `controlPlane.fencing.credentials[]` (Two-Node with Fencing) | 4.22+ | GA (agent-based samples exist from 4.22) |
+| `controlPlane.fencing.credentials[].macAddress` as node identifier | 5.0+ | GA |
+| `osImageStream` (`rhel-9` / `rhel-10`) | 4.22+ | Tech Preview on 4.22 (needs `featureSet: TechPreviewNoUpgrade`), GA on 5.0 |
+| `networking.networkObservability.installationPolicy` | 5.0+ | Tech Preview (needs the `NetworkObservabilityInstall` feature gate) |
+| `capabilities.baselineCapabilitySet` values | all | list grows to `v<selected release>` |
+
+Fields a lower version does not support are hidden in the form and omitted from the emitted YAML, so switching the picker down is safe: the data stays in the form and reappears when you switch back up.
+
+Fields that exist in newer docs but are cloud-only (`compute.management`, `endpoint.clusterUseOnly`, vSphere failure domains) are intentionally not surfaced since this tool targets baremetal / platform `none`.
 
 ## Develop
 
@@ -33,7 +46,7 @@ npm run preview
 
 ## Scope
 
-- `install-config.yaml` (apiVersion `v1`) — metadata, controlPlane, compute pools, networking (cluster/service/machine, OVN-Kubernetes tunables), platform baremetal/none, proxy, additional trust bundle, imageDigestSources, capabilities (baseline + additional), FIPS, cpuPartitioningMode, featureSet, publish, pullSecret, sshKey.
+- `install-config.yaml` (apiVersion `v1`) — metadata, controlPlane (incl. two-node fencing credentials), arbiter pool, compute pools, networking (cluster/service/machine, OVN-Kubernetes tunables, network observability policy), platform baremetal/none, proxy, additional trust bundle, imageDigestSources, capabilities (baseline + additional), FIPS, cpuPartitioningMode, featureSet, osImageStream, publish, pullSecret, sshKey.
 - `agent-config.yaml` (apiVersion `v1beta1`) — rendezvousIP, bootArtifactsBaseURL, minimalISO, additionalNTPSources, per-host hostname/role/rootDeviceHints/MAC interfaces/nmstate networkConfig.
 - nmstate — interfaces (ethernet/bond/vlan/linux-bridge), per-family IPv4/IPv6 (DHCP, autoconf, static), MTU, MAC, DNS, routes, bond mode + options, VLAN base + id, bridge STP + ports.
 
@@ -41,7 +54,8 @@ npm run preview
 
 - **Disk encryption** (TPM/Tang) is shipped via MachineConfig manifests, not `install-config.yaml`. The form surfaces the choices but does not currently emit the MachineConfig — you'll need to drop those into `openshift/` manifests before running `openshift-install agent create image`.
 - **Import YAML** is best-effort. It merges known keys into the form; unknown fields are dropped. Re-export may not exactly match the input.
-- Validation is light — the form will let you emit invalid combos (e.g. rendezvousIP outside the machine network). Run `openshift-install agent create cluster-manifests` on the output to validate.
+- Validation is light — the form will let you emit invalid combos (e.g. rendezvousIP outside the machine network). Two-node fencing shows inline warnings for the replica counts but does not block. Run `openshift-install agent create cluster-manifests` on the output to validate.
+- **Fencing passwords** are BMC credentials and land in `install-config.yaml` in plain text, exactly as the upstream samples do. Treat the downloaded file accordingly.
 
 ## Layout
 

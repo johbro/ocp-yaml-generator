@@ -1,6 +1,6 @@
 <script setup>
-import { useConfig, hyperthreadingOptions, architectureOptions, networkTypeOptions, publishOptions, featureSetOptions, baselineCapabilityOptions, additionalCapabilityOptions, trustBundlePolicyOptions, cpuPartitioningOptions, platformTypeOptions, diskEncryptionTypes } from '../stores/config.js'
-import { atLeast420 } from '../utils/docs.js'
+import { useConfig, hyperthreadingOptions, architectureOptions, networkTypeOptions, publishOptions, featureSetOptions, baselineCapabilityOptions, additionalCapabilityOptions, trustBundlePolicyOptions, cpuPartitioningOptions, platformTypeOptions, diskEncryptionTypes, osImageStreamOptions, networkObservabilityPolicyOptions, certificateVerificationOptions } from '../stores/config.js'
+import { atLeast420, atLeast422, atLeast50 } from '../utils/docs.js'
 import Section from './Section.vue'
 import Field from './Field.vue'
 import StringList from './StringList.vue'
@@ -53,6 +53,18 @@ function removeTangServer(i) { c.diskEncryption.tang.splice(i, 1) }
           <option v-for="o in featureSetOptions" :key="o" :value="o">{{ o || '(default)' }}</option>
         </select>
       </Field>
+      <Field
+        v-if="atLeast422"
+        label="OS image stream"
+        doc-key="install.osImageStream"
+        :help="atLeast50
+          ? 'RHCOS base image: rhel-9 or rhel-10. GA in 5.0 (rhel-10 is the 5.0 default). Leave default to let the installer choose.'
+          : 'Tech Preview on 4.22: requires featureSet: TechPreviewNoUpgrade. Selects the RHCOS base image for all machines.'"
+      >
+        <select v-model="c.osImageStream">
+          <option v-for="o in osImageStreamOptions" :key="o" :value="o">{{ o || '(default)' }}</option>
+        </select>
+      </Field>
     </Section>
 
     <Section title="Control plane" doc-key="install.controlPlane">
@@ -68,6 +80,53 @@ function removeTangServer(i) { c.diskEncryption.tang.splice(i, 1) }
           <option v-for="o in architectureOptions" :key="o" :value="o">{{ o }}</option>
         </select>
       </Field>
+
+      <div v-if="atLeast422" class="card">
+        <header><span class="title">Two-node with fencing (TNF)</span></header>
+        <Field
+          label="Enable fencing"
+          doc-key="install.controlPlane.fencing"
+          help="Two-node OpenShift with fencing (GA 4.22+). Requires controlPlane replicas 2, compute replicas 0, platform baremetal or none, and exactly two Redfish credentials."
+        >
+          <input type="checkbox" v-model="c.controlPlane.fencing.enabled" />
+        </Field>
+        <template v-if="c.controlPlane.fencing.enabled">
+          <p v-if="Number(c.controlPlane.replicas) !== 2" class="warn">controlPlane.replicas must be 2 for a two-node cluster with fencing.</p>
+          <p v-if="c.compute.some((p) => Number(p.replicas) > 0)" class="warn">A two-node cluster with fencing does not support compute nodes — set compute replicas to 0.</p>
+          <div v-for="(cred, i) in c.controlPlane.fencing.credentials" :key="i" class="card">
+            <header><span class="title">Credential {{ i + 1 }} (control plane node {{ i }})</span></header>
+            <div class="grid-2">
+              <Field
+                label="Hostname"
+                doc-key="install.controlPlane.fencing.credentials.hostname"
+                :help="atLeast50 ? 'Must match the hostname in agent-config. Provide hostname or MAC address (hostname wins if both).' : 'Must match the hostname in agent-config.'"
+              >
+                <input type="text" v-model="cred.hostname" placeholder="master-0" />
+              </Field>
+              <Field
+                v-if="atLeast50"
+                label="MAC address"
+                doc-key="install.controlPlane.fencing.credentials.macAddress"
+                help="5.0+: OS-visible NIC MAC (not the BMC MAC). Must match a hosts[].interfaces[].macAddress in agent-config."
+              >
+                <input type="text" v-model="cred.macAddress" placeholder="aa:bb:cc:dd:ee:ff" />
+              </Field>
+            </div>
+            <Field label="Redfish address" doc-key="install.controlPlane.fencing.credentials.address" help="redfish+https:// scheme only; IPMI and vendor schemes are rejected.">
+              <input type="text" v-model="cred.address" placeholder="redfish+https://192.168.122.1:443/redfish/v1/Systems/1" />
+            </Field>
+            <div class="grid-2">
+              <Field label="BMC username" doc-key="install.controlPlane.fencing.credentials.username"><input type="text" v-model="cred.username" /></Field>
+              <Field label="BMC password" doc-key="install.controlPlane.fencing.credentials.password"><input type="password" v-model="cred.password" autocomplete="off" /></Field>
+            </div>
+            <Field label="Certificate verification" doc-key="install.controlPlane.fencing.credentials.certificateVerification" help="Disabled for self-signed BMC certs. Omitted means Enabled.">
+              <select v-model="cred.certificateVerification">
+                <option v-for="o in certificateVerificationOptions" :key="o" :value="o">{{ o || '(default: Enabled)' }}</option>
+              </select>
+            </Field>
+          </div>
+        </template>
+      </div>
     </Section>
 
     <Section v-if="atLeast420" title="Arbiter pool (Two-Node with Arbiter)" :start-open="false" doc-key="install.arbiter">
@@ -168,6 +227,19 @@ function removeTangServer(i) { c.diskEncryption.tang.splice(i, 1) }
         </Field>
         <Field label="MTU" doc-key="install.networking.ovnKubernetesConfig.mtu">
           <input type="number" v-model.number="c.networking.ovnKubernetesConfig.mtu" placeholder="1400" />
+        </Field>
+      </div>
+
+      <div v-if="atLeast50" class="card">
+        <header><span class="title">Network observability (5.0+, Tech Preview)</span></header>
+        <Field
+          label="Installation policy"
+          doc-key="install.networking.networkObservability.installationPolicy"
+          help="Requires the NetworkObservabilityInstall feature gate. InstallAndEnable installs the operator and a default FlowCollector on all topologies (incl. SNO); NoAction disables auto-install. Omit for default behaviour."
+        >
+          <select v-model="c.networking.networkObservability.installationPolicy">
+            <option v-for="o in networkObservabilityPolicyOptions" :key="o" :value="o">{{ o || '(default)' }}</option>
+          </select>
         </Field>
       </div>
     </Section>

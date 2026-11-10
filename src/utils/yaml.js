@@ -1,5 +1,5 @@
 import yaml from 'js-yaml'
-import { atLeast420 } from './docs.js'
+import { atLeast420, atLeast422, atLeast50 } from './docs.js'
 
 // ---- Helpers ----
 const isEmpty = (v) => {
@@ -85,6 +85,13 @@ export function buildInstallConfig(src) {
   }
   if (src.featureSet) out.featureSet = src.featureSet
 
+  // osImageStream (OCP 4.22+; Tech Preview on 4.22, GA on 5.0)
+  if (atLeast422.value && src.osImageStream) out.osImageStream = src.osImageStream
+
+  // Two-Node OpenShift with Fencing (OCP 4.22+ for the agent-based installer)
+  const fencing = buildFencing(src.controlPlane?.fencing)
+  if (fencing) out.controlPlane.fencing = fencing
+
   // Arbiter pool (OCP 4.20+)
   if (atLeast420.value && src.arbiter?.enabled) {
     out.arbiter = {
@@ -106,6 +113,26 @@ export function buildInstallConfig(src) {
   })
 }
 
+// controlPlane.fencing.credentials — exactly two entries, one per control
+// plane node. `macAddress` as an identifier is accepted from 5.0; on 4.22 the
+// docs only identify nodes by hostname, so we drop it there.
+function buildFencing(f) {
+  if (!atLeast422.value || !f?.enabled) return null
+  const creds = (f.credentials || [])
+    .map((c) => {
+      const out = {}
+      if (c.hostname) out.hostname = c.hostname
+      if (atLeast50.value && c.macAddress) out.macAddress = c.macAddress
+      out.address = c.address
+      out.username = c.username
+      out.password = c.password
+      if (c.certificateVerification) out.certificateVerification = c.certificateVerification
+      return out
+    })
+    .filter((c) => c.hostname || c.macAddress || c.address || c.username || c.password)
+  return creds.length > 0 ? { credentials: creds } : null
+}
+
 function buildNetworking(n) {
   const out = {
     networkType: n.networkType,
@@ -123,6 +150,9 @@ function buildNetworking(n) {
   if (ovn.internalTransitSwitchSubnet) ovnOut.internalTransitSwitchSubnet = ovn.internalTransitSwitchSubnet
   if (ovn.mtu) ovnOut.mtu = Number(ovn.mtu)
   if (Object.keys(ovnOut).length > 0) out.ovnKubernetesConfig = ovnOut
+  // networkObservability.installationPolicy (OCP 5.0+, Tech Preview)
+  const policy = n.networkObservability?.installationPolicy
+  if (atLeast50.value && policy) out.networkObservability = { installationPolicy: policy }
   return out
 }
 
