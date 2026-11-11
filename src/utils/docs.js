@@ -3,6 +3,13 @@
 // byte-identical across versions, so switching `ocpVersion` just swaps the
 // base URL path.
 //
+// Each key must point at the section that actually documents that field.
+// The agent-based parameter tables split differently than you might guess
+// (e.g. controlPlane/compute/sshKey are "optional", and everything in
+// agent-config except metadata is "optional"), and they omit some fields
+// entirely (proxy, disk encryption, VIPs, most root device hints) — those
+// link to the narrative section or the bare-metal reference instead.
+//
 // nmstate uses a single rolling page with stable per-topic anchors.
 
 import { ref, watch, computed } from 'vue'
@@ -67,6 +74,20 @@ function buildMap(ver) {
   const HOST_CONFIG = `${PREPARING}#agent-host-config${PREP}`
   const BONDS_VLANS = `${PREPARING}#agent-install-sample-config-bonds-vlans${PREP}`
   const FIPS = `${PREPARING}#agent-installer-fips-compliance${PREP}`
+  const ROOT_HINTS = `${PREPARING}#root-device-hints${PREP}`
+  const PLATFORM_NONE = `${PREPARING}#installation-requirements-platform-none${PREP}`
+  // Sample bare-metal install-config.yaml — the only place the agent-based
+  // book describes apiVIPs / ingressVIPs.
+  const SAMPLE_INSTALL = `${PREPARING}#installation-bare-metal-agent-installer-config-yaml${PREP}`
+
+  const DISK_ENCRYPTION = `${AGENT_BASE}/installing-with-agent-based-installer#installing-ocp-agent-encrypt_installing-with-agent-based-installer`
+  const MIRRORING = `${AGENT_BASE}/understanding-disconnected-installation-mirroring#agent-install-configuring-for-disconnected-registry_understanding-disconnected-installation-mirroring`
+
+  // Fields the agent-based book does not document; same install-config
+  // schema, described in the bare-metal book.
+  const BM_UPI = `https://docs.redhat.com/en/documentation/openshift_container_platform/${ver}/html/installing_on_bare_metal/user-provisioned-infrastructure`
+  const PROXY = `${BM_UPI}#installation-configure-proxy_installing-bare-metal`
+  const OVN_CONFIG = `${BM_UPI}#nw-operator-configuration-parameters-for-ovn-sdn_installing-bare-metal-network-customizations`
 
   // Two-node topologies live in their own book (4.20+). Anchors verified on
   // 4.20, 4.21, 4.22 and 5.0; the agent-based TNF samples exist from 4.22.
@@ -101,21 +122,21 @@ function buildMap(ver) {
   }
 
   return {
-    // install-config — required
+    // install-config — required (only these + platform are in the required table)
     'install.baseDomain': SEC_REQ,
     'install.metadata.name': SEC_REQ,
     'install.pullSecret': SEC_REQ,
-    'install.sshKey': SEC_REQ,
-    'install.controlPlane': SEC_REQ,
-    'install.controlPlane.name': SEC_REQ,
-    'install.controlPlane.replicas': SEC_REQ,
-    'install.controlPlane.hyperthreading': SEC_REQ,
-    'install.controlPlane.architecture': SEC_REQ,
-    'install.compute': SEC_REQ,
-    'install.compute.name': SEC_REQ,
-    'install.compute.replicas': SEC_REQ,
-    'install.compute.hyperthreading': SEC_REQ,
-    'install.compute.architecture': SEC_REQ,
+    'install.sshKey': SEC_OPT,
+    'install.controlPlane': SEC_OPT,
+    'install.controlPlane.name': SEC_OPT,
+    'install.controlPlane.replicas': SEC_OPT,
+    'install.controlPlane.hyperthreading': SEC_OPT,
+    'install.controlPlane.architecture': SEC_OPT,
+    'install.compute': SEC_OPT,
+    'install.compute.name': SEC_OPT,
+    'install.compute.replicas': SEC_OPT,
+    'install.compute.hyperthreading': SEC_OPT,
+    'install.compute.architecture': SEC_OPT,
 
     // install-config — networking
     'install.networking': SEC_NET,
@@ -127,9 +148,9 @@ function buildMap(ver) {
     'install.networking.machineNetwork': SEC_NET,
     'install.networking.ovnKubernetesConfig': SEC_NET,
     'install.networking.ovnKubernetesConfig.internalJoinSubnet': SEC_NET,
-    'install.networking.ovnKubernetesConfig.internalMasqueradeSubnet': SEC_NET,
-    'install.networking.ovnKubernetesConfig.internalTransitSwitchSubnet': SEC_NET,
-    'install.networking.ovnKubernetesConfig.mtu': SEC_NET,
+    'install.networking.ovnKubernetesConfig.internalMasqueradeSubnet': OVN_CONFIG,
+    'install.networking.ovnKubernetesConfig.internalTransitSwitchSubnet': OVN_CONFIG,
+    'install.networking.ovnKubernetesConfig.mtu': OVN_CONFIG,
     'install.networking.networkObservability': SEC_NET,
     'install.networking.networkObservability.installationPolicy': SEC_NET,
 
@@ -139,21 +160,21 @@ function buildMap(ver) {
     'install.cpuPartitioningMode': SEC_OPT,
     'install.featureSet': SEC_OPT,
     'install.osImageStream': SEC_OPT,
-    'install.proxy': SEC_OPT,
-    'install.proxy.httpProxy': SEC_OPT,
-    'install.proxy.httpsProxy': SEC_OPT,
-    'install.proxy.noProxy': SEC_OPT,
+    'install.proxy': PROXY,
+    'install.proxy.httpProxy': PROXY,
+    'install.proxy.httpsProxy': PROXY,
+    'install.proxy.noProxy': PROXY,
     'install.additionalTrustBundle': SEC_OPT,
-    'install.additionalTrustBundlePolicy': SEC_OPT,
-    'install.imageDigestSources': SEC_OPT,
-    'install.imageDigestSources.source': SEC_OPT,
-    'install.imageDigestSources.mirrors': SEC_OPT,
+    'install.additionalTrustBundlePolicy': PROXY,
+    'install.imageDigestSources': MIRRORING,
+    'install.imageDigestSources.source': MIRRORING,
+    'install.imageDigestSources.mirrors': MIRRORING,
     'install.capabilities': SEC_OPT,
     'install.capabilities.baselineCapabilitySet': SEC_OPT,
     'install.capabilities.additionalEnabledCapabilities': SEC_OPT,
-    'install.diskEncryption': SEC_OPT,
-    'install.diskEncryption.type': SEC_OPT,
-    'install.diskEncryption.tang': SEC_OPT,
+    'install.diskEncryption': DISK_ENCRYPTION,
+    'install.diskEncryption.type': DISK_ENCRYPTION,
+    'install.diskEncryption.tang': DISK_ENCRYPTION,
 
     // install-config — two-node with fencing (TNF, 4.22+ for agent-based)
     'install.controlPlane.fencing': TNF_INSTALL_SAMPLE,
@@ -173,38 +194,39 @@ function buildMap(ver) {
     'install.arbiter.architecture': SEC_OPT,
 
     // install-config — bare-metal platform
-    'install.platformType': SEC_BM,
+    'install.platformType': SEC_REQ,
     'install.platform.baremetal': SEC_BM,
-    'install.platform.baremetal.apiVIPs': SEC_BM,
-    'install.platform.baremetal.ingressVIPs': SEC_BM,
+    'install.platform.baremetal.apiVIPs': SAMPLE_INSTALL,
+    'install.platform.baremetal.ingressVIPs': SAMPLE_INSTALL,
     'install.platform.baremetal.hosts': SEC_BM,
-    'install.platform.none': SEC_BM,
+    'install.platform.none': PLATFORM_NONE,
 
     // agent-config — required
     'agent.metadata.name': AGENT_REQ,
-    'agent.rendezvousIP': AGENT_REQ,
-    'agent.hosts': AGENT_REQ,
-    'agent.hosts.hostname': AGENT_REQ,
-    'agent.hosts.role': AGENT_REQ,
-    'agent.hosts.interfaces': AGENT_REQ,
-    'agent.hosts.interfaces.name': AGENT_REQ,
-    'agent.hosts.interfaces.macAddress': AGENT_REQ,
 
-    // agent-config — optional
+    // agent-config — optional (rendezvousIP and hosts.* live in this table)
+    'agent.rendezvousIP': AGENT_OPT,
+    'agent.hosts': AGENT_OPT,
+    'agent.hosts.hostname': AGENT_OPT,
+    'agent.hosts.role': AGENT_OPT,
+    'agent.hosts.interfaces': AGENT_OPT,
+    'agent.hosts.interfaces.name': AGENT_OPT,
+    'agent.hosts.interfaces.macAddress': AGENT_OPT,
+
     'agent.bootArtifactsBaseURL': AGENT_OPT,
     'agent.minimalISO': AGENT_OPT,
     'agent.additionalNTPSources': AGENT_OPT,
-    'agent.hosts.rootDeviceHints': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.deviceName': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.hctl': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.model': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.vendor': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.serialNumber': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.minSizeGigabytes': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.wwn': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.wwnWithExtension': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.wwnVendorExtension': AGENT_OPT,
-    'agent.hosts.rootDeviceHints.rotational': AGENT_OPT,
+    'agent.hosts.rootDeviceHints': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.deviceName': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.hctl': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.model': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.vendor': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.serialNumber': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.minSizeGigabytes': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.wwn': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.wwnWithExtension': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.wwnVendorExtension': ROOT_HINTS,
+    'agent.hosts.rootDeviceHints.rotational': ROOT_HINTS,
 
     // Narrative links
     'agent.hosts.networkConfig': NETWORKING,
